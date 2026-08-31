@@ -30,76 +30,72 @@ document.querySelectorAll('.faqItem .question').forEach(function(q){
   q.addEventListener('click',function(){q.parentElement.classList.toggle('open')});
 });
 
-var previewVideos=Array.prototype.slice.call(document.querySelectorAll('video[data-preview]'));
+var previewVideos=Array.prototype.slice.call(document.querySelectorAll('#previews video[data-preview]'));
 var activePreview=null;
 
-function stopOtherPreviews(current){
+function pauseOtherPreviews(current){
   previewVideos.forEach(function(other){
     if(other!==current) other.pause();
   });
 }
 
-function startPreview(v){
-  stopOtherPreviews(v);
+function playProductPreview(v){
+  if(!v) return;
+  pauseOtherPreviews(v);
   activePreview=v;
   v.muted=false;
   v.volume=1;
   var p=v.play();
-  if(p&&p.catch){
-    p.catch(function(){
-      // Some mobile browsers block audible autoplay. A user tap will retry playback.
-    });
-  }
+  if(p&&p.catch) p.catch(function(){});
 }
 
 previewVideos.forEach(function(v){
   v.muted=false;
   v.volume=1;
 
-  // Desktop: autoplay when the pointer enters the preview.
+  // Desktop hover.
   v.addEventListener('mouseenter',function(){
-    startPreview(v);
+    playProductPreview(v);
   });
 
-  // Mobile + desktop: any direct tap/click on the video starts it with sound.
-  v.addEventListener('click',function(){
-    startPreview(v);
+  // Tap/click. On mobile this is the reliable gesture that can unlock audible playback.
+  v.addEventListener('pointerup',function(e){
+    e.preventDefault();
+    playProductPreview(v);
   });
 
-  v.addEventListener('touchend',function(){
-    startPreview(v);
-  },{passive:true});
-
-  // If native controls were used to start playback, keep one-at-a-time and full volume.
+  // Keep manually-started/native playback at full volume and exclusive.
   v.addEventListener('play',function(){
-    stopOtherPreviews(v);
+    pauseOtherPreviews(v);
     activePreview=v;
     v.muted=false;
     v.volume=1;
   });
 });
 
-// Scroll visibility. On mobile, a single preview becomes eligible when most of it is visible.
-// We deliberately do not pause/reset the preview when it leaves the viewport.
+// Play only product previews when they become the dominant visible card.
+// We intentionally DO NOT reset a preview when it leaves the viewport.
 var observer=new IntersectionObserver(function(entries){
   entries.forEach(function(entry){
-    var v=entry.target;
     if(entry.isIntersecting && entry.intersectionRatio>=0.65){
-      startPreview(v);
+      playProductPreview(entry.target);
     }
   });
 },{threshold:[0.65]});
 
 previewVideos.forEach(function(v){observer.observe(v);});
 
-// "WATCH REAL PREVIEWS" should target PREVIEW 01, not the hero preview.
+// "WATCH REAL PREVIEWS" must start Preview 01 in the product-preview section,
+// never the hero preview.
 var watchPreviewsButton=document.getElementById('watch-previews');
 if(watchPreviewsButton){
   watchPreviewsButton.addEventListener('click',function(){
-    setTimeout(function(){
-      var firstPreview=document.querySelector('video[data-preview="01"]');
-      if(firstPreview) startPreview(firstPreview);
-    },350);
+    var firstPreview=document.querySelector('#previews video[data-preview="01"]');
+    if(firstPreview){
+      setTimeout(function(){
+        playProductPreview(firstPreview);
+      },500);
+    }
   });
 }
 </script></body></html>
