@@ -33,13 +33,15 @@ document.querySelectorAll('.faqItem .question').forEach(function(q){
 });
 var previewVideos=Array.prototype.slice.call(document.querySelectorAll('video[data-preview]'));
 var activePreview=null;
+previewVideos.forEach(function(v){v.muted=false;v.volume=0.5;});
 var observer=new IntersectionObserver(function(entries){
   entries.forEach(function(entry){
     var v=entry.target;
     if(entry.isIntersecting && entry.intersectionRatio>=0.65){
       if(activePreview && activePreview!==v){activePreview.pause();activePreview.currentTime=0;}
       activePreview=v;
-      v.muted=true;
+      v.muted=false;
+      v.volume=0.5;
       var p=v.play();
       if(p && p.catch) p.catch(function(){});
     } else if(!entry.isIntersecting){
@@ -49,6 +51,8 @@ var observer=new IntersectionObserver(function(entries){
 },{threshold:[0,0.65,0.9]});
 previewVideos.forEach(function(v){
   v.addEventListener('play',function(){
+    v.muted=false;
+    v.volume=0.5;
     previewVideos.forEach(function(other){if(other!==v)other.pause();});
     activePreview=v;
   });
