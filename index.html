@@ -38,38 +38,30 @@ previewVideos.forEach(function(v){
   v.volume=1;
 });
 
-var observer=new IntersectionObserver(function(entries){
-  entries.forEach(function(entry){
-    var v=entry.target;
-
-    if(entry.isIntersecting && entry.intersectionRatio>=0.65){
-      if(activePreview && activePreview!==v){
-        activePreview.pause();
-      }
-
-      activePreview=v;
-      v.muted=false;
-      v.volume=1;
-
-      var playPromise=v.play();
-      if(playPromise && playPromise.catch){
-        playPromise.catch(function(){});
-      }
-    }
-  });
-},{threshold:[0,0.65,0.9]});
+function playPreview(v){
+  if(activePreview && activePreview!==v){
+    activePreview.pause();
+  }
+  activePreview=v;
+  v.muted=false;
+  v.volume=1;
+  var p=v.play();
+  if(p && p.catch) p.catch(function(){});
+}
 
 previewVideos.forEach(function(v){
   v.addEventListener('mouseenter',function(){
-    if(activePreview && activePreview!==v){
-      activePreview.pause();
-    }
-    activePreview=v;
-    v.muted=false;
-    v.volume=1;
-    var playPromise=v.play();
-    if(playPromise && playPromise.catch){playPromise.catch(function(){});}
+    playPreview(v);
   });
+
+  v.addEventListener('click',function(e){
+    e.preventDefault();
+    playPreview(v);
+  });
+
+  v.addEventListener('touchstart',function(){
+    playPreview(v);
+  },{passive:true});
 
   v.addEventListener('play',function(){
     v.muted=false;
@@ -79,7 +71,16 @@ previewVideos.forEach(function(v){
     });
     activePreview=v;
   });
-
-  observer.observe(v);
 });
+
+var observer=new IntersectionObserver(function(entries){
+  entries.forEach(function(entry){
+    var v=entry.target;
+    if(entry.isIntersecting && entry.intersectionRatio>=0.65){
+      playPreview(v);
+    }
+  });
+},{threshold:[0,0.65,0.9]});
+
+previewVideos.forEach(function(v){observer.observe(v);});
 </script></body></html>
