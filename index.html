@@ -23,39 +23,63 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 <script>
 document.querySelectorAll('.buy').forEach(function(b){
   b.addEventListener('click',function(){
-    if(typeof fbq==='function'){
-      fbq('track','InitiateCheckout',{content_name:'700+ Anime Edits Bundle',value:199,currency:'INR'});
-    }
+    if(typeof fbq==='function') fbq('track','InitiateCheckout',{content_name:'700+ Anime Edits Bundle',value:199,currency:'INR'});
   });
 });
 document.querySelectorAll('.faqItem .question').forEach(function(q){
   q.addEventListener('click',function(){q.parentElement.classList.toggle('open')});
 });
+
 var previewVideos=Array.prototype.slice.call(document.querySelectorAll('video[data-preview]'));
 var activePreview=null;
-previewVideos.forEach(function(v){v.muted=false;v.volume=0.5;});
+
+previewVideos.forEach(function(v){
+  v.muted=false;
+  v.volume=1;
+});
+
 var observer=new IntersectionObserver(function(entries){
   entries.forEach(function(entry){
     var v=entry.target;
+
     if(entry.isIntersecting && entry.intersectionRatio>=0.65){
-      if(activePreview && activePreview!==v){activePreview.pause();activePreview.currentTime=0;}
+      if(activePreview && activePreview!==v){
+        activePreview.pause();
+      }
+
       activePreview=v;
       v.muted=false;
-      v.volume=0.5;
-      var p=v.play();
-      if(p && p.catch) p.catch(function(){});
-    } else if(!entry.isIntersecting){
-      if(activePreview===v){v.pause();v.currentTime=0;activePreview=null;}
+      v.volume=1;
+
+      var playPromise=v.play();
+      if(playPromise && playPromise.catch){
+        playPromise.catch(function(){});
+      }
     }
   });
 },{threshold:[0,0.65,0.9]});
+
 previewVideos.forEach(function(v){
+  v.addEventListener('mouseenter',function(){
+    if(activePreview && activePreview!==v){
+      activePreview.pause();
+    }
+    activePreview=v;
+    v.muted=false;
+    v.volume=1;
+    var playPromise=v.play();
+    if(playPromise && playPromise.catch){playPromise.catch(function(){});}
+  });
+
   v.addEventListener('play',function(){
     v.muted=false;
-    v.volume=0.5;
-    previewVideos.forEach(function(other){if(other!==v)other.pause();});
+    v.volume=1;
+    previewVideos.forEach(function(other){
+      if(other!==v) other.pause();
+    });
     activePreview=v;
   });
+
   observer.observe(v);
 });
 </script></body></html>
