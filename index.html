@@ -46,9 +46,6 @@ if(watchPreviewsButton){
     },350);
   });
 }
-var previewVideos=Array.prototype.slice.call(document.querySelectorAll('video[data-preview]'));
-var activePreview=null;
-
 previewVideos.forEach(function(v){
   v.muted=false;
   v.volume=1;
