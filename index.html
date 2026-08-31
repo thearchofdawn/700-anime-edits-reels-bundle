@@ -30,70 +30,76 @@ document.querySelectorAll('.faqItem .question').forEach(function(q){
   q.addEventListener('click',function(){q.parentElement.classList.toggle('open')});
 });
 
+var previewVideos=Array.prototype.slice.call(document.querySelectorAll('video[data-preview]'));
+var activePreview=null;
+
+function stopOtherPreviews(current){
+  previewVideos.forEach(function(other){
+    if(other!==current) other.pause();
+  });
+}
+
+function startPreview(v){
+  stopOtherPreviews(v);
+  activePreview=v;
+  v.muted=false;
+  v.volume=1;
+  var p=v.play();
+  if(p&&p.catch){
+    p.catch(function(){
+      // Some mobile browsers block audible autoplay. A user tap will retry playback.
+    });
+  }
+}
+
+previewVideos.forEach(function(v){
+  v.muted=false;
+  v.volume=1;
+
+  // Desktop: autoplay when the pointer enters the preview.
+  v.addEventListener('mouseenter',function(){
+    startPreview(v);
+  });
+
+  // Mobile + desktop: any direct tap/click on the video starts it with sound.
+  v.addEventListener('click',function(){
+    startPreview(v);
+  });
+
+  v.addEventListener('touchend',function(){
+    startPreview(v);
+  },{passive:true});
+
+  // If native controls were used to start playback, keep one-at-a-time and full volume.
+  v.addEventListener('play',function(){
+    stopOtherPreviews(v);
+    activePreview=v;
+    v.muted=false;
+    v.volume=1;
+  });
+});
+
+// Scroll visibility. On mobile, a single preview becomes eligible when most of it is visible.
+// We deliberately do not pause/reset the preview when it leaves the viewport.
+var observer=new IntersectionObserver(function(entries){
+  entries.forEach(function(entry){
+    var v=entry.target;
+    if(entry.isIntersecting && entry.intersectionRatio>=0.65){
+      startPreview(v);
+    }
+  });
+},{threshold:[0.65]});
+
+previewVideos.forEach(function(v){observer.observe(v);});
+
+// "WATCH REAL PREVIEWS" should target PREVIEW 01, not the hero preview.
 var watchPreviewsButton=document.getElementById('watch-previews');
 if(watchPreviewsButton){
   watchPreviewsButton.addEventListener('click',function(){
     setTimeout(function(){
       var firstPreview=document.querySelector('video[data-preview="01"]');
-      if(firstPreview){
-        firstPreview.muted=false;
-        firstPreview.volume=1;
-        if(activePreview && activePreview!==firstPreview) activePreview.pause();
-        activePreview=firstPreview;
-        var p=firstPreview.play();
-        if(p&&p.catch) p.catch(function(){});
-      }
+      if(firstPreview) startPreview(firstPreview);
     },350);
   });
 }
-previewVideos.forEach(function(v){
-  v.muted=false;
-  v.volume=1;
-});
-
-function playPreview(v){
-  if(activePreview && activePreview!==v){
-    activePreview.pause();
-  }
-  activePreview=v;
-  v.muted=false;
-  v.volume=1;
-  var p=v.play();
-  if(p && p.catch) p.catch(function(){});
-}
-
-previewVideos.forEach(function(v){
-  v.addEventListener('mouseenter',function(){
-    playPreview(v);
-  });
-
-  v.addEventListener('click',function(e){
-    e.preventDefault();
-    playPreview(v);
-  });
-
-  v.addEventListener('touchstart',function(){
-    playPreview(v);
-  },{passive:true});
-
-  v.addEventListener('play',function(){
-    v.muted=false;
-    v.volume=1;
-    previewVideos.forEach(function(other){
-      if(other!==v) other.pause();
-    });
-    activePreview=v;
-  });
-});
-
-var observer=new IntersectionObserver(function(entries){
-  entries.forEach(function(entry){
-    var v=entry.target;
-    if(entry.isIntersecting && entry.intersectionRatio>=0.65){
-      playPreview(v);
-    }
-  });
-},{threshold:[0,0.65,0.9]});
-
-previewVideos.forEach(function(v){observer.observe(v);});
 </script></body></html>
