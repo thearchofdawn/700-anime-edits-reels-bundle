@@ -25,16 +25,16 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
   var heroVideo=document.querySelector('.heroCard video');
   var productVideos=Array.prototype.slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
   var activeVideo=null;
-  var isAutoTransitioning=false;
+  var userHasInteracted=false;
 
-  function forceFullAudio(video){
+  function setAudio(video){
     if(!video)return;
     video.defaultMuted=false;
     video.muted=false;
     video.volume=1;
   }
 
-  function pauseOtherProducts(current){
+  function pauseOthers(current){
     productVideos.forEach(function(video){
       if(video!==current) video.pause();
     });
@@ -43,50 +43,59 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
   function playProduct(video){
     if(!video)return;
     if(heroVideo) heroVideo.pause();
-    pauseOtherProducts(video);
+    pauseOthers(video);
     activeVideo=video;
-    forceFullAudio(video);
-    try{
-      var playPromise=video.play();
-      if(playPromise && playPromise.catch){
-        playPromise.catch(function(){});
-      }
-    }catch(err){}
+    setAudio(video);
+    var promise=video.play();
+    if(promise && promise.catch) promise.catch(function(){});
   }
 
-  // Desktop: hover starts playback.
-  productVideos.forEach(function(video){
-    forceFullAudio(video);
+  // Any page interaction unlocks the best possible audible autoplay behavior on phones.
+  ['touchstart','pointerdown','click'].forEach(function(type){
+    document.addEventListener(type,function(){
+      userHasInteracted=true;
+      productVideos.forEach(setAudio);
+    },{passive:true});
+  });
 
+  productVideos.forEach(function(video){
+    setAudio(video);
+
+    // Desktop hover.
     video.addEventListener('mouseenter',function(){
       playProduct(video);
     });
 
-    // Touch/click fallback: a real user gesture.
+    // Direct tap/click anywhere on the preview.
+    video.addEventListener('click',function(){
+      playProduct(video);
+    });
+
     video.addEventListener('pointerup',function(){
       playProduct(video);
     });
 
     video.addEventListener('play',function(){
       if(heroVideo) heroVideo.pause();
-      pauseOtherProducts(video);
+      pauseOthers(video);
       activeVideo=video;
-      forceFullAudio(video);
+      setAudio(video);
     });
   });
 
-  // Scroll autoplay. On phones there is no hover, so visibility drives playback.
+  // Scroll autoplay: when 65% of a product preview is visible, play that preview.
+  // Leaving the viewport pauses nothing, so playback position is never reset.
   if('IntersectionObserver' in window){
     var observer=new IntersectionObserver(function(entries){
-      var candidate=null;
+      var best=null;
       entries.forEach(function(entry){
-        if(entry.isIntersecting && entry.intersectionRatio>=0.55){
-          candidate=entry.target;
+        if(entry.isIntersecting && entry.intersectionRatio>=0.65){
+          if(!best || entry.intersectionRatio>best.intersectionRatio) best=entry;
         }
       });
-      if(candidate) playProduct(candidate);
+      if(best) playProduct(best.target);
     },{
-      threshold:[0.55]
+      threshold:[0.65]
     });
 
     productVideos.forEach(function(video){
@@ -94,51 +103,40 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     });
   }
 
-  // WATCH REAL PREVIEWS -> Preview 01.
-  var watchButton=document.getElementById('watch-previews');
-  if(watchButton){
-    watchButton.addEventListener('click',function(event){
+  // WATCH REAL PREVIEWS: directly jump to Product Preview 01.
+  var watch=document.getElementById('watch-previews');
+  if(watch){
+    watch.addEventListener('click',function(event){
       event.preventDefault();
-      event.stopImmediatePropagation();
+      event.stopPropagation();
 
-      var first=document.querySelector('#previews .previewCard video[data-preview="01"]');
+      var first=document.querySelector('#previews .previewGrid .previewCard video[data-preview="01"]');
       if(!first)return;
 
-      // Stop the hero video and all other product previews.
       if(heroVideo) heroVideo.pause();
-      productVideos.forEach(function(video){
-        if(video!==first) video.pause();
-      });
-
-      forceFullAudio(first);
+      pauseOthers(first);
+      setAudio(first);
       activeVideo=first;
 
-      // Jump to the actual first product card.
       var card=first.closest('.previewCard');
       if(card){
-        var top=card.getBoundingClientRect().top + window.pageYOffset - 20;
-        window.scrollTo(0,Math.max(0,top));
+        var rect=card.getBoundingClientRect();
+        var target=window.pageYOffset+rect.top-24;
+        window.scrollTo({top:Math.max(0,target),behavior:'smooth'});
       }
 
-      // Click is a direct user gesture, so request playback immediately.
-      try{
-        var p=first.play();
-        if(p && p.catch){
-          p.catch(function(){
-            // Retry after the browser finishes the scroll operation.
-            setTimeout(function(){
-              forceFullAudio(first);
-              first.play().catch(function(){});
-            },200);
-          });
-        }
-      }catch(err){
-        setTimeout(function(){
-          forceFullAudio(first);
-          first.play().catch(function(){});
-        },200);
+      // Start Preview 01 from the button's user gesture.
+      var p=first.play();
+      if(p && p.catch){
+        p.catch(function(){
+          // Fallback after scrolling has begun.
+          setTimeout(function(){
+            setAudio(first);
+            first.play().catch(function(){});
+          },120);
+        });
       }
-    },true);
+    },false);
   }
 })();
 </script></body></html>
