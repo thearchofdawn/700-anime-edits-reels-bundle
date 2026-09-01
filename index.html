@@ -32,7 +32,7 @@ document.querySelectorAll('.faqItem .question').forEach(function(q){
 
 var previewVideos=Array.prototype.slice.call(document.querySelectorAll('#previews .previewGrid video[data-preview]'));
 var activePreview=null;
-var ignoreNextIntersectionUntil=0;
+var observerStarted=true;
 
 function pauseOtherPreviews(current){
   previewVideos.forEach(function(other){
@@ -56,8 +56,7 @@ previewVideos.forEach(function(v){
 
   v.addEventListener('mouseenter',function(){ playProductPreview(v); });
 
-  v.addEventListener('pointerup',function(e){
-    e.preventDefault();
+  v.addEventListener('pointerup',function(){
     playProductPreview(v);
   });
 
@@ -71,7 +70,6 @@ previewVideos.forEach(function(v){
 
 var observer=new IntersectionObserver(function(entries){
   entries.forEach(function(entry){
-    if(Date.now()<ignoreNextIntersectionUntil) return;
     if(entry.isIntersecting && entry.intersectionRatio>=0.65){
       playProductPreview(entry.target);
     }
@@ -88,32 +86,30 @@ if(watchPreviewsButton){
     var firstPreview=document.querySelector('#previews .previewGrid video[data-preview="01"]');
     if(!firstPreview) return;
 
-    // Stop the hero preview and every other product preview first.
+    // Stop every other video, including the hero preview.
     document.querySelectorAll('video').forEach(function(v){
       if(v!==firstPreview) v.pause();
     });
 
-    // Prevent the scroll observer from immediately selecting another card.
-    ignoreNextIntersectionUntil=Date.now()+2500;
+    // Scroll only to the Preview 01 product card.
+    var card=firstPreview.closest('.previewCard');
+    if(card) card.scrollIntoView({behavior:'smooth',block:'center'});
 
+    // Because this click is a direct user gesture, try playback immediately.
     firstPreview.muted=false;
     firstPreview.volume=1;
     activePreview=firstPreview;
 
-    // Scroll specifically to Preview 01's card.
-    firstPreview.closest('.previewCard').scrollIntoView({behavior:'smooth',block:'center'});
-
-    // Start immediately on the user's click. Retry once after the smooth scroll begins.
     var p=firstPreview.play();
     if(p&&p.catch){
       p.catch(function(){
+        // Retry after the scroll begins; mobile browsers may delay playback during smooth scrolling.
         setTimeout(function(){
           firstPreview.muted=false;
           firstPreview.volume=1;
           firstPreview.play().catch(function(){});
-        },300);
+        },100);
       });
     }
   });
-}
-</script></body></html>
+}</script></body></html>
