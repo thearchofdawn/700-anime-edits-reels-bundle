@@ -21,54 +21,59 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 <section class="final"><div class="wrap"><div class="finalCard"><span class="tag">FINAL OFFER</span><h2>700+ EDITS.<br><span class="grad">ONE BUNDLE.</span></h2><p style="color:#a6a6bb">Build your anime content library today for the current launch price.</p><div class="finalPrice"><span class="old">₹999</span><span class="price">₹199</span></div><div class="deal">80% OFF • LIMITED-TIME LAUNCH OFFER</div><a class="btn buy" style="margin-top:20px" href="https://superprofile.bio/vp/700--anime-edits-%E2%80%94-the-ultimate-anime-reels-bundle?checkout=true">GET 700+ ANIME EDITS — ₹199 →</a></div></div></section>
 <footer><div class="wrap"><b style="color:#fff">THE ARCH OF DAWN</b><p>Support: thearchofdawn@gmail.com</p><div class="disc">Usage notice: Third-party anime characters, footage, music, trademarks and other intellectual property remain the property of their respective owners. No ownership of third-party intellectual property is transferred through this purchase. Buyers are responsible for lawful use.</div></div></footer><div class="sticky"><small>700+ Anime Edits • ₹199</small><a class="buy" href="https://superprofile.bio/vp/700--anime-edits-%E2%80%94-the-ultimate-anime-reels-bundle?checkout=true">GET ACCESS — ₹199 →</a></div>
 <script>
-(function(){
-var previewVideos=Array.prototype.slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
-var heroPreview=document.querySelector('.heroCard video');
-var activePreview=null;
+document.querySelectorAll('.buy').forEach(function(b){b.addEventListener('click',function(){if(typeof fbq==='function')fbq('track','InitiateCheckout',{content_name:'700+ Anime Edits Bundle',value:199,currency:'INR'});});});
+document.querySelectorAll('.faqItem .question').forEach(function(q){q.addEventListener('click',function(){q.parentElement.classList.toggle('open');});});
 
-function setVolume(v){v.muted=false;v.volume=1;}
-function startPreview(v){
- if(!v)return;
- if(heroPreview)heroPreview.pause();
- previewVideos.forEach(function(x){if(x!==v)x.pause();});
- activePreview=v;
- setVolume(v);
- var p=v.play();if(p&&p.catch)p.catch(function(){});
+var heroVideo=document.querySelector('.heroCard video');
+var previews=Array.prototype.slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
+var active=null;
+
+function fullVolume(v){v.muted=false;v.volume=1;}
+function stopOthers(current){previews.forEach(function(v){if(v!==current)v.pause();});}
+function playPreview(v){
+  if(!v)return;
+  if(heroVideo)heroVideo.pause();
+  stopOthers(v);
+  active=v;
+  fullVolume(v);
+  var p=v.play();
+  if(p&&p.catch)p.catch(function(){});
 }
 
-previewVideos.forEach(function(v){
- setVolume(v);
- v.addEventListener('mouseenter',function(){startPreview(v);});
- v.addEventListener('pointerdown',function(){startPreview(v);});
- v.addEventListener('play',function(){startPreview(v);});
+previews.forEach(function(v){
+  fullVolume(v);
+  v.addEventListener('mouseenter',function(){playPreview(v);});
+  v.addEventListener('click',function(){playPreview(v);});
+  v.addEventListener('touchend',function(){playPreview(v);},{passive:true});
+  v.addEventListener('play',function(){playPreview(v);});
 });
 
 if('IntersectionObserver' in window){
- var observer=new IntersectionObserver(function(entries){
-  entries.forEach(function(entry){
-   if(entry.isIntersecting && entry.intersectionRatio>=0.6) startPreview(entry.target);
-  });
- },{threshold:[0.6]});
- previewVideos.forEach(function(v){observer.observe(v);});
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting&&entry.intersectionRatio>=0.65)playPreview(entry.target);
+    });
+  },{threshold:[0.65]});
+  previews.forEach(function(v){io.observe(v);});
 }
 
 var watch=document.getElementById('watch-previews');
 if(watch){
- watch.addEventListener('click',function(e){
-  e.preventDefault();
-  var first=document.querySelector('#previews .previewGrid .previewCard video[data-preview="01"]');
-  if(!first)return;
-  if(heroPreview)heroPreview.pause();
-  previewVideos.forEach(function(v){if(v!==first)v.pause();});
-  setVolume(first);
-  activePreview=first;
-  var card=first.closest('.previewCard');
-  if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
-  var p=first.play();
-  if(p&&p.catch)p.catch(function(){
-   setTimeout(function(){setVolume(first);first.play().catch(function(){});},150);
+  watch.addEventListener('click',function(e){
+    e.preventDefault();
+    var first=document.querySelector('#previews .previewGrid .previewCard video[data-preview="01"]');
+    if(!first)return;
+    if(heroVideo)heroVideo.pause();
+    stopOthers(first);
+    fullVolume(first);
+    active=first;
+    var card=first.closest('.previewCard');
+    if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
+    first.play().catch(function(){});
+    setTimeout(function(){
+      fullVolume(first);
+      first.play().catch(function(){});
+    },250);
   });
- });
 }
-})();
 </script></body></html>
