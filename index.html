@@ -21,101 +21,149 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 <section class="final"><div class="wrap"><div class="finalCard"><span class="tag">FINAL OFFER</span><h2>700+ EDITS.<br><span class="grad">ONE BUNDLE.</span></h2><p style="color:#a6a6bb">Build your anime content library today for the current launch price.</p><div class="finalPrice"><span class="old">₹999</span><span class="price">₹199</span></div><div class="deal">80% OFF • LIMITED-TIME LAUNCH OFFER</div><a class="btn buy" style="margin-top:20px" href="https://superprofile.bio/vp/700--anime-edits-%E2%80%94-the-ultimate-anime-reels-bundle?checkout=true">GET 700+ ANIME EDITS — ₹199 →</a></div></div></section>
 <footer><div class="wrap"><b style="color:#fff">THE ARCH OF DAWN</b><p>Support: thearchofdawn@gmail.com</p><div class="disc">Usage notice: Third-party anime characters, footage, music, trademarks and other intellectual property remain the property of their respective owners. No ownership of third-party intellectual property is transferred through this purchase. Buyers are responsible for lawful use.</div></div></footer><div class="sticky"><small>700+ Anime Edits • ₹199</small><a class="buy" href="https://superprofile.bio/vp/700--anime-edits-%E2%80%94-the-ultimate-anime-reels-bundle?checkout=true">GET ACCESS — ₹199 →</a></div>
 <script>
-(function(){
-  document.querySelectorAll('.buy').forEach(function(b){
-    b.addEventListener('click',function(){
-      if(typeof fbq==='function') fbq('track','InitiateCheckout',{content_name:'700+ Anime Edits Bundle',value:199,currency:'INR'});
-    });
-  });
-  document.querySelectorAll('.faqItem .question').forEach(function(q){
-    q.addEventListener('click',function(){q.parentElement.classList.toggle('open');});
-  });
-
-  var heroVideo=document.querySelector('.heroCard video');
-  var productVideos=Array.prototype.slice.call(document.querySelectorAll('#previews video[data-preview]'));
-  var active=null;
-
-  function forceVolume(v){
-    try{v.muted=false;v.defaultMuted=false;v.volume=1;}catch(e){}
-  }
-
-  function pauseProductVideosExcept(current){
-    productVideos.forEach(function(v){if(v!==current)v.pause();});
-  }
-
-  function playProductVideo(v){
-    if(!v)return;
-    if(heroVideo)heroVideo.pause();
-    pauseProductVideosExcept(v);
-    active=v;
-    forceVolume(v);
-    var p=v.play();
-    if(p&&p.catch)p.catch(function(){});
-  }
-
-  productVideos.forEach(function(v){
-    forceVolume(v);
-
-    v.addEventListener('mouseenter',function(){
-      playProductVideo(v);
-    });
-
-    v.addEventListener('click',function(){
-      playProductVideo(v);
-    });
-
-    v.addEventListener('touchend',function(){
-      playProductVideo(v);
-    },{passive:true});
-
-    v.addEventListener('play',function(){
-      playProductVideo(v);
-    });
-  });
-
-  if('IntersectionObserver' in window){
-    var observer=new IntersectionObserver(function(entries){
-      entries.forEach(function(entry){
-        if(entry.isIntersecting && entry.intersectionRatio>=0.60){
-          playProductVideo(entry.target);
-        }
-      });
-    },{threshold:[0.60]});
-    productVideos.forEach(function(v){observer.observe(v);});
-  }
-
-  var watch=document.getElementById('watch-previews');
-  if(watch){
-    watch.addEventListener('click',function(e){
-      e.preventDefault();
-      e.stopImmediatePropagation();
-
-      var first=document.querySelector('#previews video[data-preview="01"]');
-      if(!first)return;
-
-      // Stop hero and every other product preview.
-      if(heroVideo)heroVideo.pause();
-      pauseProductVideosExcept(first);
-
-      forceVolume(first);
-      active=first;
-
-      var card=first.closest('.previewCard');
-      if(card){
-        card.scrollIntoView({behavior:'smooth',block:'start'});
-      }
-
-      // Use the click as the playback gesture and retry once after scrolling.
-      var p=first.play();
-      if(p&&p.catch){
-        p.catch(function(){
-          setTimeout(function(){
-            forceVolume(first);
-            first.play().catch(function(){});
-          },100);
+(function () {
+  document.querySelectorAll('.buy').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (typeof fbq === 'function') {
+        fbq('track', 'InitiateCheckout', {
+          content_name: '700+ Anime Edits Bundle',
+          value: 199,
+          currency: 'INR'
         });
       }
     });
+  });
+
+  document.querySelectorAll('.faqItem .question').forEach(function (q) {
+    q.addEventListener('click', function () {
+      q.parentElement.classList.toggle('open');
+    });
+  });
+
+  // IMPORTANT: only videos inside the REAL PRODUCT PREVIEWS gallery are controlled
+  // by this autoplay system. The hero preview is never part of this list.
+  var productVideos = Array.prototype.slice.call(
+    document.querySelectorAll('#previews .previewGrid .previewCard video[data-preview]')
+  );
+  var heroVideo = document.querySelector('.heroCard video');
+  var activeVideo = null;
+
+  function setFullVolume(video) {
+    try {
+      video.muted = false;
+      video.defaultMuted = false;
+      video.volume = 1;
+    } catch (err) {}
+  }
+
+  function pauseOtherProductVideos(current) {
+    productVideos.forEach(function (video) {
+      if (video !== current) video.pause();
+    });
+  }
+
+  function playProductVideo(video) {
+    if (!video) return;
+
+    if (heroVideo && heroVideo !== video) {
+      heroVideo.pause();
+    }
+
+    pauseOtherProductVideos(video);
+    activeVideo = video;
+    setFullVolume(video);
+
+    var promise = video.play();
+    if (promise && promise.catch) {
+      promise.catch(function () {});
+    }
+  }
+
+  productVideos.forEach(function (video) {
+    setFullVolume(video);
+
+    // Desktop hover
+    video.addEventListener('mouseenter', function () {
+      playProductVideo(video);
+    });
+
+    // Any click/tap on the actual video
+    video.addEventListener('click', function () {
+      playProductVideo(video);
+    });
+
+    // Touch fallback for phones
+    video.addEventListener('touchend', function () {
+      playProductVideo(video);
+    }, { passive: true });
+
+    // If native controls start it, keep the one-at-a-time/full-volume rules.
+    video.addEventListener('play', function () {
+      if (heroVideo) heroVideo.pause();
+      pauseOtherProductVideos(video);
+      activeVideo = video;
+      setFullVolume(video);
+    });
+  });
+
+  // Scroll autoplay: when a product preview becomes mostly visible, start it.
+  if ('IntersectionObserver' in window) {
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.60) {
+          playProductVideo(entry.target);
+        }
+      });
+    }, {
+      threshold: [0.60]
+    });
+
+    productVideos.forEach(function (video) {
+      observer.observe(video);
+    });
+  }
+
+  // WATCH REAL PREVIEWS -> PREVIEW 01.
+  // This handler is attached after all video handlers and uses the exact button ID.
+  var watchButton = document.getElementById('watch-previews');
+
+  if (watchButton) {
+    watchButton.addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      var first = document.querySelector('#previews .previewGrid .previewCard video[data-preview="01"]');
+
+      if (!first) return;
+
+      if (heroVideo) heroVideo.pause();
+      pauseOtherProductVideos(first);
+      activeVideo = first;
+      setFullVolume(first);
+
+      var card = first.closest('.previewCard');
+
+      if (card) {
+        var top = card.getBoundingClientRect().top + window.pageYOffset - 16;
+        window.scrollTo({
+          top: Math.max(0, top),
+          behavior: 'smooth'
+        });
+      }
+
+      // The click itself is the user gesture: request Preview 01 immediately.
+      var promise = first.play();
+
+      if (promise && promise.catch) {
+        promise.catch(function () {
+          // Retry once after the smooth scroll begins.
+          setTimeout(function () {
+            setFullVolume(first);
+            first.play().catch(function () {});
+          }, 250);
+        });
+      }
+    }, false);
   }
 })();
 </script></body></html>
