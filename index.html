@@ -27,100 +27,92 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
       if(typeof fbq==='function') fbq('track','InitiateCheckout',{content_name:'700+ Anime Edits Bundle',value:199,currency:'INR'});
     });
   });
-
   document.querySelectorAll('.faqItem .question').forEach(function(q){
     q.addEventListener('click',function(){q.parentElement.classList.toggle('open');});
   });
 
   var heroVideo=document.querySelector('.heroCard video');
-  var previews=Array.prototype.slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
+  var productVideos=Array.prototype.slice.call(document.querySelectorAll('#previews video[data-preview]'));
   var active=null;
 
-  function setFullVolume(v){
-    v.muted=false;
-    v.volume=1;
+  function forceVolume(v){
+    try{v.muted=false;v.defaultMuted=false;v.volume=1;}catch(e){}
   }
 
-  function pauseOthers(current){
-    previews.forEach(function(v){
-      if(v!==current) v.pause();
-    });
+  function pauseProductVideosExcept(current){
+    productVideos.forEach(function(v){if(v!==current)v.pause();});
   }
 
-  function start(v){
+  function playProductVideo(v){
     if(!v)return;
-    if(heroVideo && heroVideo!==v) heroVideo.pause();
-    pauseOthers(v);
-    setFullVolume(v);
+    if(heroVideo)heroVideo.pause();
+    pauseProductVideosExcept(v);
     active=v;
+    forceVolume(v);
     var p=v.play();
     if(p&&p.catch)p.catch(function(){});
   }
 
-  // Desktop hover
-  previews.forEach(function(v){
-    setFullVolume(v);
-    v.addEventListener('mouseenter',function(){ start(v); });
+  productVideos.forEach(function(v){
+    forceVolume(v);
 
-    // Any click/tap on the preview = play it.
-    v.addEventListener('click',function(){ start(v); });
+    v.addEventListener('mouseenter',function(){
+      playProductVideo(v);
+    });
 
-    v.addEventListener('touchstart',function(){
-      start(v);
+    v.addEventListener('click',function(){
+      playProductVideo(v);
+    });
+
+    v.addEventListener('touchend',function(){
+      playProductVideo(v);
     },{passive:true});
 
     v.addEventListener('play',function(){
-      pauseOthers(v);
-      if(heroVideo)heroVideo.pause();
-      active=v;
-      setFullVolume(v);
+      playProductVideo(v);
     });
   });
 
-  // Scroll autoplay. No reset when leaving viewport.
   if('IntersectionObserver' in window){
-    var io=new IntersectionObserver(function(entries){
+    var observer=new IntersectionObserver(function(entries){
       entries.forEach(function(entry){
-        if(entry.isIntersecting && entry.intersectionRatio>=0.65){
-          start(entry.target);
+        if(entry.isIntersecting && entry.intersectionRatio>=0.60){
+          playProductVideo(entry.target);
         }
       });
-    },{threshold:[0.65]});
-    previews.forEach(function(v){io.observe(v);});
+    },{threshold:[0.60]});
+    productVideos.forEach(function(v){observer.observe(v);});
   }
 
-  // IMPORTANT: Watch button is handled only by this listener.
-  // It targets Preview 01 and does not rely on the #previews anchor alone.
   var watch=document.getElementById('watch-previews');
   if(watch){
     watch.addEventListener('click',function(e){
       e.preventDefault();
-      e.stopPropagation();
+      e.stopImmediatePropagation();
 
-      var first=document.querySelector('#previews .previewCard video[data-preview="01"]');
+      var first=document.querySelector('#previews video[data-preview="01"]');
       if(!first)return;
 
+      // Stop hero and every other product preview.
       if(heroVideo)heroVideo.pause();
-      pauseOthers(first);
+      pauseProductVideosExcept(first);
+
+      forceVolume(first);
       active=first;
-      setFullVolume(first);
 
       var card=first.closest('.previewCard');
       if(card){
-        var rect=card.getBoundingClientRect();
-        var targetY=window.scrollY+rect.top-12;
-        window.scrollTo({top:Math.max(0,targetY),behavior:'smooth'});
+        card.scrollIntoView({behavior:'smooth',block:'start'});
       }
 
-      // Direct user gesture: immediately request Preview 01 playback.
+      // Use the click as the playback gesture and retry once after scrolling.
       var p=first.play();
       if(p&&p.catch){
         p.catch(function(){
-          // Some browsers defer playback while scrolling; retry once.
           setTimeout(function(){
-            setFullVolume(first);
+            forceVolume(first);
             first.play().catch(function(){});
-          },200);
+          },100);
         });
       }
     });
