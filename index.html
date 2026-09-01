@@ -23,108 +23,71 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 <script>
 (function(){
   var heroVideo=document.querySelector('.heroCard video');
-  var productVideos=[].slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
-  var activeVideo=null;
+  var previews=Array.prototype.slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
 
-  function setFullVolume(video){
-    if(!video)return;
-    video.defaultMuted=false;
-    video.muted=false;
-    video.volume=1;
-  }
-
-  function stopOthers(current){
-    productVideos.forEach(function(video){
-      if(video!==current){
-        video.pause();
-      }
-    });
-  }
-
-  function playVideo(video){
-    if(!video)return;
+  function full(v){ if(!v)return; v.defaultMuted=false; v.muted=false; v.volume=1; }
+  function pauseOthers(current){ previews.forEach(function(v){ if(v!==current)v.pause(); }); }
+  function play(v){
+    if(!v)return;
     if(heroVideo)heroVideo.pause();
-    stopOthers(video);
-    activeVideo=video;
-    setFullVolume(video);
-    try{
-      var p=video.play();
-      if(p&&typeof p.catch==='function')p.catch(function(){});
-    }catch(err){}
+    pauseOthers(v);
+    full(v);
+    try{ var p=v.play(); if(p&&p.catch)p.catch(function(){}); }catch(e){}
   }
 
-  // Native video controls + click/tap/hover all use the same handler.
-  productVideos.forEach(function(video){
-    setFullVolume(video);
+  previews.forEach(function(v){
+    full(v);
 
-    video.addEventListener('mouseenter',function(){
-      playVideo(video);
+    // Desktop hover.
+    v.addEventListener('mouseenter',function(){ play(v); });
+
+    // Phone + desktop tap/click.
+    v.addEventListener('pointerup',function(e){
+      if(e.pointerType==='touch') e.preventDefault();
+      play(v);
     });
 
-    video.addEventListener('pointerup',function(){
-      playVideo(video);
-    });
-
-    video.addEventListener('play',function(){
-      if(heroVideo)heroVideo.pause();
-      stopOthers(video);
-      activeVideo=video;
-      setFullVolume(video);
-    });
+    v.addEventListener('play',function(){ play(v); });
   });
 
-  // Mobile browsers do not provide hover. IntersectionObserver handles scroll.
+  // Mobile/desktop scroll autoplay.
   if('IntersectionObserver' in window){
     var observer=new IntersectionObserver(function(entries){
       entries.forEach(function(entry){
-        if(entry.isIntersecting && entry.intersectionRatio>=0.55){
-          playVideo(entry.target);
-        }
+        if(entry.isIntersecting && entry.intersectionRatio>=0.55) play(entry.target);
       });
     },{threshold:[0.55]});
-    productVideos.forEach(function(video){observer.observe(video);});
+    previews.forEach(function(v){observer.observe(v);});
   }
 
-  // Watch button: prevent anchor navigation and target ONLY product Preview 01.
-  var watchButton=document.getElementById('watch-previews');
-  if(watchButton){
-    watchButton.addEventListener('click',function(event){
-      event.preventDefault();
-      event.stopImmediatePropagation();
+  // WATCH REAL PREVIEWS -> scroll to the actual Preview 01 card and play it.
+  var watch=document.getElementById('watch-previews');
+  if(watch){
+    watch.addEventListener('click',function(e){
+      e.preventDefault();
+      e.stopPropagation();
 
-      var first=document.querySelector('#previews .previewGrid video[data-preview="01"]');
+      var first=document.querySelector('#previews video[data-preview="01"]');
       if(!first)return;
 
-      // Stop hero + all other product previews.
-      if(heroVideo)heroVideo.pause();
-      productVideos.forEach(function(video){
-        if(video!==first)video.pause();
-      });
-
-      setFullVolume(first);
-      activeVideo=first;
-
-      // Instant, deterministic jump to Preview 01 card.
       var card=first.closest('.previewCard');
       if(card){
-        var rect=card.getBoundingClientRect();
-        var target=Math.max(0,window.pageYOffset+rect.top-20);
-        window.scrollTo(0,target);
+        card.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});
+      }else{
+        first.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});
       }
 
-      // Click is a direct user gesture.
-      setFullVolume(first);
-      var p=first.play();
-      if(p&&typeof p.catch==='function'){
-        p.catch(function(){
-          // Retry once after the browser has processed the scroll.
-          setTimeout(function(){
-            setFullVolume(first);
-            first.play().catch(function(){});
-          },100);
-        });
-      }
-    },true);
+      if(heroVideo)heroVideo.pause();
+      pauseOthers(first);
+      full(first);
+
+      // Immediately attempt playback from the button gesture.
+      play(first);
+
+      // Retry after scroll animation without changing the video position.
+      setTimeout(function(){ play(first); },120);
+      setTimeout(function(){ play(first); },500);
+    });
   }
 })();
 </script></body></html>
