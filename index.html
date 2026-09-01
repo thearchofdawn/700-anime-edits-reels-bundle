@@ -30,8 +30,9 @@ document.querySelectorAll('.faqItem .question').forEach(function(q){
   q.addEventListener('click',function(){q.parentElement.classList.toggle('open')});
 });
 
-var previewVideos=Array.prototype.slice.call(document.querySelectorAll('#previews video[data-preview]'));
+var previewVideos=Array.prototype.slice.call(document.querySelectorAll('#previews .previewGrid video[data-preview]'));
 var activePreview=null;
+var ignoreNextIntersectionUntil=0;
 
 function pauseOtherPreviews(current){
   previewVideos.forEach(function(other){
@@ -53,18 +54,13 @@ previewVideos.forEach(function(v){
   v.muted=false;
   v.volume=1;
 
-  // Desktop hover.
-  v.addEventListener('mouseenter',function(){
-    playProductPreview(v);
-  });
+  v.addEventListener('mouseenter',function(){ playProductPreview(v); });
 
-  // Tap/click. On mobile this is the reliable gesture that can unlock audible playback.
   v.addEventListener('pointerup',function(e){
     e.preventDefault();
     playProductPreview(v);
   });
 
-  // Keep manually-started/native playback at full volume and exclusive.
   v.addEventListener('play',function(){
     pauseOtherPreviews(v);
     activePreview=v;
@@ -73,28 +69,50 @@ previewVideos.forEach(function(v){
   });
 });
 
-// Play only product previews when they become the dominant visible card.
-// We intentionally DO NOT reset a preview when it leaves the viewport.
 var observer=new IntersectionObserver(function(entries){
   entries.forEach(function(entry){
+    if(Date.now()<ignoreNextIntersectionUntil) return;
     if(entry.isIntersecting && entry.intersectionRatio>=0.65){
       playProductPreview(entry.target);
     }
   });
 },{threshold:[0.65]});
 
-previewVideos.forEach(function(v){observer.observe(v);});
+previewVideos.forEach(function(v){ observer.observe(v); });
 
-// "WATCH REAL PREVIEWS" must start Preview 01 in the product-preview section,
-// never the hero preview.
 var watchPreviewsButton=document.getElementById('watch-previews');
 if(watchPreviewsButton){
-  watchPreviewsButton.addEventListener('click',function(){
-    var firstPreview=document.querySelector('#previews video[data-preview="01"]');
-    if(firstPreview){
-      setTimeout(function(){
-        playProductPreview(firstPreview);
-      },500);
+  watchPreviewsButton.addEventListener('click',function(e){
+    e.preventDefault();
+
+    var firstPreview=document.querySelector('#previews .previewGrid video[data-preview="01"]');
+    if(!firstPreview) return;
+
+    // Stop the hero preview and every other product preview first.
+    document.querySelectorAll('video').forEach(function(v){
+      if(v!==firstPreview) v.pause();
+    });
+
+    // Prevent the scroll observer from immediately selecting another card.
+    ignoreNextIntersectionUntil=Date.now()+2500;
+
+    firstPreview.muted=false;
+    firstPreview.volume=1;
+    activePreview=firstPreview;
+
+    // Scroll specifically to Preview 01's card.
+    firstPreview.closest('.previewCard').scrollIntoView({behavior:'smooth',block:'center'});
+
+    // Start immediately on the user's click. Retry once after the smooth scroll begins.
+    var p=firstPreview.play();
+    if(p&&p.catch){
+      p.catch(function(){
+        setTimeout(function(){
+          firstPreview.muted=false;
+          firstPreview.volume=1;
+          firstPreview.play().catch(function(){});
+        },300);
+      });
     }
   });
 }
