@@ -23,108 +23,120 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 <script>
 (function(){
   var hero=document.querySelector('.heroCard video');
-  var productVideos=Array.prototype.slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
+  var section=document.getElementById('previews');
+  var grid=section ? section.querySelector('.previewGrid') : null;
+  var videos=grid ? Array.prototype.slice.call(grid.querySelectorAll('video[data-preview]')) : [];
+  var watch=document.getElementById('watch-previews');
   var active=null;
 
-  function setAudio(v){
+  function setFullAudio(v){
     if(!v)return;
     v.defaultMuted=false;
     v.muted=false;
     v.volume=1;
   }
 
-  function stopOthers(current){
-    productVideos.forEach(function(v){
-      if(v!==current)v.pause();
+  function pauseAllExcept(v){
+    videos.forEach(function(x){
+      if(x!==v)x.pause();
     });
   }
 
-  function playProduct(v){
+  function playPreview(v){
     if(!v)return;
     if(hero)hero.pause();
-    stopOthers(v);
+    pauseAllExcept(v);
     active=v;
-    setAudio(v);
+    setFullAudio(v);
     try{
       var p=v.play();
       if(p&&p.catch)p.catch(function(){});
     }catch(e){}
   }
 
-  // Preserve the working mobile/desktop product-preview behavior.
-  productVideos.forEach(function(v){
-    setAudio(v);
+  videos.forEach(function(v){
+    setFullAudio(v);
 
+    // Desktop hover.
     v.addEventListener('mouseenter',function(){
-      playProduct(v);
+      playPreview(v);
     });
 
+    // Mobile/desktop tap/click.
     v.addEventListener('click',function(){
-      playProduct(v);
+      playPreview(v);
     });
 
     v.addEventListener('touchend',function(){
-      playProduct(v);
+      playPreview(v);
     },{passive:true});
 
+    // Keep one-at-a-time behavior if native controls are used.
     v.addEventListener('play',function(){
       if(hero)hero.pause();
-      stopOthers(v);
+      pauseAllExcept(v);
       active=v;
-      setAudio(v);
+      setFullAudio(v);
     });
   });
 
+  // Scroll autoplay at 65% visibility.
   if('IntersectionObserver' in window){
     var observer=new IntersectionObserver(function(entries){
-      var best=null;
+      var candidate=null;
       for(var i=0;i<entries.length;i++){
         if(entries[i].isIntersecting && entries[i].intersectionRatio>=0.65){
-          if(!best || entries[i].intersectionRatio>best.intersectionRatio)best=entries[i];
+          if(!candidate || entries[i].intersectionRatio>candidate.intersectionRatio){
+            candidate=entries[i];
+          }
         }
       }
-      if(best)playProduct(best.target);
+      if(candidate)playPreview(candidate.target);
     },{threshold:[0.65]});
-    productVideos.forEach(function(v){observer.observe(v);});
+
+    videos.forEach(function(v){observer.observe(v);});
   }
 
-  // The button has its own reliable click behavior and no dependence on the hash.
-  var watch=document.getElementById('watch-previews');
+  // Watch button: use a native button click, then explicitly scroll and play Preview 01.
   if(watch){
     watch.addEventListener('click',function(e){
       e.preventDefault();
-      e.stopPropagation();
+      e.stopImmediatePropagation();
 
-      var first=document.querySelector('#previews .previewGrid .previewCard video[data-preview="01"]');
+      var first=grid ? grid.querySelector('video[data-preview="01"]') : null;
       if(!first)return;
 
+      // Stop anything currently playing.
       if(hero)hero.pause();
-      stopOthers(first);
-      setAudio(first);
-      active=first;
+      pauseAllExcept(first);
 
-      // Calculate Preview 01's exact document position and jump there.
+      // First jump instantly to the actual Preview 01 card.
       var card=first.closest('.previewCard');
-      var target=card
-        ? card.getBoundingClientRect().top + window.pageYOffset - 24
-        : first.getBoundingClientRect().top + window.pageYOffset - 24;
+      if(card){
+        var rect=card.getBoundingClientRect();
+        var y=rect.top + (window.scrollY || window.pageYOffset) - 12;
+        window.scrollTo(0,Math.max(0,y));
+      }
 
-      window.scrollTo(0,Math.max(0,target));
-
-      // Because this is a real user click, request audible playback now.
+      // Then start Preview 01. The click is the user gesture.
+      setFullAudio(first);
+      active=first;
       try{
         var p=first.play();
-        if(p&&p.catch){
-          p.catch(function(){});
-        }
-      }catch(err){}
-
-      // Retry once after the browser completes the layout jump.
-      setTimeout(function(){
-        setAudio(first);
-        try{first.play().catch(function(){});}catch(err){}
-      },120);
-    },false);
+        if(p&&p.catch)p.catch(function(){
+          // Mobile browser fallback after the scroll has completed.
+          setTimeout(function(){
+            setFullAudio(first);
+            first.play().catch(function(){});
+          },50);
+        });
+      }catch(err){
+        setTimeout(function(){
+          setFullAudio(first);
+          first.play().catch(function(){});
+        },50);
+      }
+    },true);
   }
 })();
 </script></body></html>
