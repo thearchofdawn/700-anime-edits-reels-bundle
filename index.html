@@ -22,31 +22,109 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 <footer><div class="wrap"><b style="color:#fff">THE ARCH OF DAWN</b><p>Support: thearchofdawn@gmail.com</p><div class="disc">Usage notice: Third-party anime characters, footage, music, trademarks and other intellectual property remain the property of their respective owners. No ownership of third-party intellectual property is transferred through this purchase. Buyers are responsible for lawful use.</div></div></footer><div class="sticky"><small>700+ Anime Edits • ₹199</small><a class="buy" href="https://superprofile.bio/vp/700--anime-edits-%E2%80%94-the-ultimate-anime-reels-bundle?checkout=true">GET ACCESS — ₹199 →</a></div>
 <script>
 (function(){
-  var watch=document.getElementById('watch-previews');
-  if(!watch)return;
+  var hero=document.querySelector('.heroCard video');
+  var productVideos=Array.prototype.slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
+  var active=null;
 
-  watch.addEventListener('click',function(){
-    var first=document.querySelector('#previews .previewCard video[data-preview="01"]');
-    if(!first)return;
+  function setAudio(v){
+    if(!v)return;
+    v.defaultMuted=false;
+    v.muted=false;
+    v.volume=1;
+  }
 
-    var card=first.closest('.previewCard');
-    if(!card)return;
+  function stopOthers(current){
+    productVideos.forEach(function(v){
+      if(v!==current)v.pause();
+    });
+  }
 
-    // Let the browser perform a normal, reliable in-page jump.
-    // The existing scroll/autoplay logic remains completely untouched.
-    location.hash='previews';
-    setTimeout(function(){
-      card.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});
-      setTimeout(function(){
-        try{
-          first.muted=false;
-          first.defaultMuted=false;
-          first.volume=1;
-          var p=first.play();
-          if(p&&p.catch)p.catch(function(){});
-        }catch(e){}
-      },250);
-    },20);
+  function playProduct(v){
+    if(!v)return;
+    if(hero)hero.pause();
+    stopOthers(v);
+    active=v;
+    setAudio(v);
+    try{
+      var p=v.play();
+      if(p&&p.catch)p.catch(function(){});
+    }catch(e){}
+  }
+
+  // Preserve the working mobile/desktop product-preview behavior.
+  productVideos.forEach(function(v){
+    setAudio(v);
+
+    v.addEventListener('mouseenter',function(){
+      playProduct(v);
+    });
+
+    v.addEventListener('click',function(){
+      playProduct(v);
+    });
+
+    v.addEventListener('touchend',function(){
+      playProduct(v);
+    },{passive:true});
+
+    v.addEventListener('play',function(){
+      if(hero)hero.pause();
+      stopOthers(v);
+      active=v;
+      setAudio(v);
+    });
   });
+
+  if('IntersectionObserver' in window){
+    var observer=new IntersectionObserver(function(entries){
+      var best=null;
+      for(var i=0;i<entries.length;i++){
+        if(entries[i].isIntersecting && entries[i].intersectionRatio>=0.65){
+          if(!best || entries[i].intersectionRatio>best.intersectionRatio)best=entries[i];
+        }
+      }
+      if(best)playProduct(best.target);
+    },{threshold:[0.65]});
+    productVideos.forEach(function(v){observer.observe(v);});
+  }
+
+  // The button has its own reliable click behavior and no dependence on the hash.
+  var watch=document.getElementById('watch-previews');
+  if(watch){
+    watch.addEventListener('click',function(e){
+      e.preventDefault();
+      e.stopPropagation();
+
+      var first=document.querySelector('#previews .previewGrid .previewCard video[data-preview="01"]');
+      if(!first)return;
+
+      if(hero)hero.pause();
+      stopOthers(first);
+      setAudio(first);
+      active=first;
+
+      // Calculate Preview 01's exact document position and jump there.
+      var card=first.closest('.previewCard');
+      var target=card
+        ? card.getBoundingClientRect().top + window.pageYOffset - 24
+        : first.getBoundingClientRect().top + window.pageYOffset - 24;
+
+      window.scrollTo(0,Math.max(0,target));
+
+      // Because this is a real user click, request audible playback now.
+      try{
+        var p=first.play();
+        if(p&&p.catch){
+          p.catch(function(){});
+        }
+      }catch(err){}
+
+      // Retry once after the browser completes the layout jump.
+      setTimeout(function(){
+        setAudio(first);
+        try{first.play().catch(function(){});}catch(err){}
+      },120);
+    },false);
+  }
 })();
 </script></body></html>
