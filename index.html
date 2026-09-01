@@ -22,106 +22,53 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 <footer><div class="wrap"><b style="color:#fff">THE ARCH OF DAWN</b><p>Support: thearchofdawn@gmail.com</p><div class="disc">Usage notice: Third-party anime characters, footage, music, trademarks and other intellectual property remain the property of their respective owners. No ownership of third-party intellectual property is transferred through this purchase. Buyers are responsible for lawful use.</div></div></footer><div class="sticky"><small>700+ Anime Edits • ₹199</small><a class="buy" href="https://superprofile.bio/vp/700--anime-edits-%E2%80%94-the-ultimate-anime-reels-bundle?checkout=true">GET ACCESS — ₹199 →</a></div>
 <script>
 (function(){
-var BUY_SELECTOR='.buy';
-document.querySelectorAll(BUY_SELECTOR).forEach(function(b){
-  b.addEventListener('click',function(){
-    if(typeof fbq==='function') fbq('track','InitiateCheckout',{content_name:'700+ Anime Edits Bundle',value:199,currency:'INR'});
-  });
-});
-document.querySelectorAll('.faqItem .question').forEach(function(q){
-  q.addEventListener('click',function(){q.parentElement.classList.toggle('open')});
-});
-
+var previewVideos=Array.prototype.slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
 var heroPreview=document.querySelector('.heroCard video');
-var productPreviews=Array.prototype.slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
 var activePreview=null;
 
-function setFullVolume(v){
-  v.muted=false;
-  try{v.volume=1;}catch(e){}
-}
-
-function pauseOthers(current){
-  productPreviews.forEach(function(v){
-    if(v!==current) v.pause();
-  });
-}
-
+function setVolume(v){v.muted=false;v.volume=1;}
 function startPreview(v){
-  if(!v) return;
-  if(heroPreview) heroPreview.pause();
-  pauseOthers(v);
-  activePreview=v;
-  setFullVolume(v);
-  var p=v.play();
-  if(p&&p.catch) p.catch(function(){});
+ if(!v)return;
+ if(heroPreview)heroPreview.pause();
+ previewVideos.forEach(function(x){if(x!==v)x.pause();});
+ activePreview=v;
+ setVolume(v);
+ var p=v.play();if(p&&p.catch)p.catch(function(){});
 }
 
-productPreviews.forEach(function(v){
-  setFullVolume(v);
-
-  v.addEventListener('mouseenter',function(){
-    startPreview(v);
-  });
-
-  v.addEventListener('pointerdown',function(){
-    startPreview(v);
-  });
-
-  v.addEventListener('play',function(){
-    if(heroPreview) heroPreview.pause();
-    pauseOthers(v);
-    activePreview=v;
-    setFullVolume(v);
-  });
+previewVideos.forEach(function(v){
+ setVolume(v);
+ v.addEventListener('mouseenter',function(){startPreview(v);});
+ v.addEventListener('pointerdown',function(){startPreview(v);});
+ v.addEventListener('play',function(){startPreview(v);});
 });
 
-// Scroll autoplay: start the product preview that becomes mostly visible.
-// We never reset a preview when it leaves the viewport.
 if('IntersectionObserver' in window){
-  var observer=new IntersectionObserver(function(entries){
-    entries.forEach(function(entry){
-      if(entry.isIntersecting && entry.intersectionRatio>=0.65){
-        startPreview(entry.target);
-      }
-    });
-  },{threshold:[0.65]});
-  productPreviews.forEach(function(v){observer.observe(v);});
+ var observer=new IntersectionObserver(function(entries){
+  entries.forEach(function(entry){
+   if(entry.isIntersecting && entry.intersectionRatio>=0.6) startPreview(entry.target);
+  });
+ },{threshold:[0.6]});
+ previewVideos.forEach(function(v){observer.observe(v);});
 }
 
-// WATCH REAL PREVIEWS:
-// Scroll directly to the first PRODUCT preview and play Preview 01.
-// It never targets the hero preview.
-var watchPreviewsButton=document.getElementById('watch-previews');
-if(watchPreviewsButton){
-  watchPreviewsButton.addEventListener('click',function(e){
-    e.preventDefault();
-
-    var firstPreview=document.querySelector('#previews .previewGrid .previewCard video[data-preview="01"]');
-    if(!firstPreview) return;
-
-    if(heroPreview) heroPreview.pause();
-    pauseOthers(firstPreview);
-    setFullVolume(firstPreview);
-    activePreview=firstPreview;
-
-    var card=firstPreview.closest('.previewCard');
-    if(card){
-      card.scrollIntoView({behavior:'smooth',block:'start'});
-    }
-
-    // Direct click gesture: request playback immediately.
-    var p=firstPreview.play();
-    if(p&&p.catch){
-      p.catch(function(){
-        // Retry after the smooth scroll starts on browsers that defer playback.
-        setTimeout(function(){
-          setFullVolume(firstPreview);
-          firstPreview.play().catch(function(){});
-        },180);
-      });
-    }
+var watch=document.getElementById('watch-previews');
+if(watch){
+ watch.addEventListener('click',function(e){
+  e.preventDefault();
+  var first=document.querySelector('#previews .previewGrid .previewCard video[data-preview="01"]');
+  if(!first)return;
+  if(heroPreview)heroPreview.pause();
+  previewVideos.forEach(function(v){if(v!==first)v.pause();});
+  setVolume(first);
+  activePreview=first;
+  var card=first.closest('.previewCard');
+  if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
+  var p=first.play();
+  if(p&&p.catch)p.catch(function(){
+   setTimeout(function(){setVolume(first);first.play().catch(function(){});},150);
   });
+ });
 }
 })();
-</script></script></body></html>
+</script></body></html>
