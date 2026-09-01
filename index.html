@@ -23,74 +23,96 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 <script>
 document.querySelectorAll('.buy').forEach(function(b){
   b.addEventListener('click',function(){
-    if(typeof fbq==='function') fbq('track','InitiateCheckout',{content_name:'700+ Anime Edits Bundle',value:199,currency:'INR'});
+    if(typeof fbq==='function'){
+      fbq('track','InitiateCheckout',{content_name:'700+ Anime Edits Bundle',value:199,currency:'INR'});
+    }
   });
 });
 document.querySelectorAll('.faqItem .question').forEach(function(q){
   q.addEventListener('click',function(){q.parentElement.classList.toggle('open')});
 });
 
-var productPreviews=Array.prototype.slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
+var heroPreview=document.querySelector('.heroCard video');
+var productPreviews=Array.prototype.slice.call(
+  document.querySelectorAll('#previews .previewCard video[data-preview]')
+);
 var activePreview=null;
 
-function pauseOthers(current){
+function stopOtherProductPreviews(current){
   productPreviews.forEach(function(v){
     if(v!==current) v.pause();
   });
 }
 
-function playPreview(v){
+function startProductPreview(v){
   if(!v) return;
-  pauseOthers(v);
+
+  // Never let the hero preview compete with the product preview gallery.
+  if(heroPreview && heroPreview!==v) heroPreview.pause();
+
+  stopOtherProductPreviews(v);
   activePreview=v;
+
   v.muted=false;
   v.volume=1;
+
   var promise=v.play();
-  if(promise&&promise.catch) promise.catch(function(){});
+  if(promise && promise.catch){
+    promise.catch(function(){});
+  }
 }
 
 productPreviews.forEach(function(v){
   v.muted=false;
   v.volume=1;
 
-  v.addEventListener('mouseenter',function(){ playPreview(v); });
+  // Desktop hover.
+  v.addEventListener('mouseenter',function(){
+    startProductPreview(v);
+  });
 
-  v.addEventListener('pointerup',function(){
-    playPreview(v);
+  // Mobile/desktop direct interaction anywhere on the preview.
+  v.addEventListener('pointerup',function(e){
+    e.preventDefault();
+    startProductPreview(v);
   });
 
   v.addEventListener('play',function(){
-    pauseOthers(v);
+    if(heroPreview) heroPreview.pause();
+    stopOtherProductPreviews(v);
     activePreview=v;
     v.muted=false;
     v.volume=1;
   });
 });
 
-// Auto-play the product preview that the customer has scrolled onto.
+// Automatically start the product preview that becomes visible while scrolling.
+// We do NOT pause or reset it when it leaves the viewport; another preview can
+// take over when it becomes the next dominant visible card.
 var observer=new IntersectionObserver(function(entries){
   entries.forEach(function(entry){
     if(entry.isIntersecting && entry.intersectionRatio>=0.65){
-      playPreview(entry.target);
+      startProductPreview(entry.target);
     }
   });
 },{threshold:[0.65]});
-productPreviews.forEach(function(v){observer.observe(v);});
 
-// Clicking WATCH REAL PREVIEWS always scrolls directly to the first PRODUCT preview
-// and starts that video. The hero preview is never selected.
+productPreviews.forEach(function(v){
+  observer.observe(v);
+});
+
+// WATCH REAL PREVIEWS -> go directly to PRODUCT PREVIEW 01 and play it.
+// This deliberately targets #previews and cannot select the hero video.
 var watchPreviewsButton=document.getElementById('watch-previews');
 if(watchPreviewsButton){
   watchPreviewsButton.addEventListener('click',function(e){
     e.preventDefault();
 
-    var firstPreview=document.querySelector('#previews .previewCard video[data-preview="01"]');
+    var firstPreview=document.querySelector('#previews .previewGrid .previewCard video[data-preview="01"]');
     if(!firstPreview) return;
 
-    // Stop hero and every other video.
-    document.querySelectorAll('video').forEach(function(v){
-      if(v!==firstPreview) v.pause();
-    });
+    if(heroPreview) heroPreview.pause();
+    stopOtherProductPreviews(firstPreview);
 
     firstPreview.muted=false;
     firstPreview.volume=1;
@@ -101,17 +123,18 @@ if(watchPreviewsButton){
       card.scrollIntoView({behavior:'smooth',block:'start'});
     }
 
-    // Start from the click gesture; retry once after scrolling begins.
+    // The click itself is a user gesture, so attempt playback immediately.
     var promise=firstPreview.play();
-    if(promise&&promise.catch){
+    if(promise && promise.catch){
       promise.catch(function(){
+        // Retry once after the scroll starts in browsers that defer playback.
         setTimeout(function(){
           firstPreview.muted=false;
           firstPreview.volume=1;
           firstPreview.play().catch(function(){});
-        },150);
+        },120);
       });
     }
   });
 }
-</script></body></html>
+</script></script></body></html>
