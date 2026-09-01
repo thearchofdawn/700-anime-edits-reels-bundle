@@ -22,121 +22,109 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 <footer><div class="wrap"><b style="color:#fff">THE ARCH OF DAWN</b><p>Support: thearchofdawn@gmail.com</p><div class="disc">Usage notice: Third-party anime characters, footage, music, trademarks and other intellectual property remain the property of their respective owners. No ownership of third-party intellectual property is transferred through this purchase. Buyers are responsible for lawful use.</div></div></footer><div class="sticky"><small>700+ Anime Edits • ₹199</small><a class="buy" href="https://superprofile.bio/vp/700--anime-edits-%E2%80%94-the-ultimate-anime-reels-bundle?checkout=true">GET ACCESS — ₹199 →</a></div>
 <script>
 (function(){
-  var heroVideo=document.querySelector('.heroCard video');
-  var productVideos=Array.prototype.slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
-  var activeVideo=null;
-  var userHasInteracted=false;
+  var hero=document.querySelector('.heroCard video');
+  var videos=[].slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
+  var active=null;
 
-  function setAudio(video){
-    if(!video)return;
-    video.defaultMuted=false;
-    video.muted=false;
-    video.volume=1;
+  function audio(v){
+    if(!v)return;
+    v.defaultMuted=false;
+    v.muted=false;
+    v.volume=1;
   }
 
-  function pauseOthers(current){
-    productVideos.forEach(function(video){
-      if(video!==current) video.pause();
+  function stopOthers(v){
+    videos.forEach(function(x){
+      if(x!==v)x.pause();
     });
   }
 
-  function playProduct(video){
-    if(!video)return;
-    if(heroVideo) heroVideo.pause();
-    pauseOthers(video);
-    activeVideo=video;
-    setAudio(video);
-    var promise=video.play();
-    if(promise && promise.catch) promise.catch(function(){});
+  function play(v){
+    if(!v)return;
+    if(hero)hero.pause();
+    stopOthers(v);
+    active=v;
+    audio(v);
+    try{
+      var p=v.play();
+      if(p&&p.catch)p.catch(function(){});
+    }catch(e){}
   }
 
-  // Any page interaction unlocks the best possible audible autoplay behavior on phones.
-  ['touchstart','pointerdown','click'].forEach(function(type){
-    document.addEventListener(type,function(){
-      userHasInteracted=true;
-      productVideos.forEach(setAudio);
+  // Native controls / direct user interaction.
+  videos.forEach(function(v){
+    audio(v);
+
+    v.addEventListener('mouseenter',function(){
+      play(v);
+    });
+
+    v.addEventListener('click',function(){
+      play(v);
+    });
+
+    v.addEventListener('touchend',function(){
+      play(v);
     },{passive:true});
-  });
 
-  productVideos.forEach(function(video){
-    setAudio(video);
-
-    // Desktop hover.
-    video.addEventListener('mouseenter',function(){
-      playProduct(video);
-    });
-
-    // Direct tap/click anywhere on the preview.
-    video.addEventListener('click',function(){
-      playProduct(video);
-    });
-
-    video.addEventListener('pointerup',function(){
-      playProduct(video);
-    });
-
-    video.addEventListener('play',function(){
-      if(heroVideo) heroVideo.pause();
-      pauseOthers(video);
-      activeVideo=video;
-      setAudio(video);
+    v.addEventListener('play',function(){
+      if(hero)hero.pause();
+      stopOthers(v);
+      active=v;
+      audio(v);
     });
   });
 
-  // Scroll autoplay: when 65% of a product preview is visible, play that preview.
-  // Leaving the viewport pauses nothing, so playback position is never reset.
+  // Mobile + desktop scroll autoplay.
   if('IntersectionObserver' in window){
-    var observer=new IntersectionObserver(function(entries){
-      var best=null;
-      entries.forEach(function(entry){
-        if(entry.isIntersecting && entry.intersectionRatio>=0.65){
-          if(!best || entry.intersectionRatio>best.intersectionRatio) best=entry;
+    var io=new IntersectionObserver(function(entries){
+      var chosen=null;
+      for(var i=0;i<entries.length;i++){
+        if(entries[i].isIntersecting && entries[i].intersectionRatio>=0.65){
+          if(!chosen || entries[i].intersectionRatio>chosen.intersectionRatio){
+            chosen=entries[i];
+          }
         }
-      });
-      if(best) playProduct(best.target);
-    },{
-      threshold:[0.65]
-    });
+      }
+      if(chosen)play(chosen.target);
+    },{threshold:[0.65]});
 
-    productVideos.forEach(function(video){
-      observer.observe(video);
-    });
+    videos.forEach(function(v){io.observe(v);});
   }
 
-  // WATCH REAL PREVIEWS: directly jump to Product Preview 01.
+  // WATCH REAL PREVIEWS -> first product card / Preview 01.
   var watch=document.getElementById('watch-previews');
   if(watch){
-    watch.addEventListener('click',function(event){
-      event.preventDefault();
-      event.stopPropagation();
+    watch.addEventListener('click',function(e){
+      e.preventDefault();
+      e.stopImmediatePropagation();
 
-      var first=document.querySelector('#previews .previewGrid .previewCard video[data-preview="01"]');
+      var first=document.querySelector('#previews .previewCard video[data-preview="01"]');
       if(!first)return;
 
-      if(heroVideo) heroVideo.pause();
-      pauseOthers(first);
-      setAudio(first);
-      activeVideo=first;
+      if(hero)hero.pause();
+      stopOthers(first);
+      audio(first);
+      active=first;
 
+      // Use the actual card as the scroll target.
       var card=first.closest('.previewCard');
       if(card){
-        var rect=card.getBoundingClientRect();
-        var target=window.pageYOffset+rect.top-24;
-        window.scrollTo({top:Math.max(0,target),behavior:'smooth'});
+        card.scrollIntoView({behavior:'smooth',block:'center'});
       }
 
-      // Start Preview 01 from the button's user gesture.
-      var p=first.play();
-      if(p && p.catch){
-        p.catch(function(){
-          // Fallback after scrolling has begun.
-          setTimeout(function(){
-            setAudio(first);
-            first.play().catch(function(){});
-          },120);
-        });
-      }
-    },false);
+      // Start from the actual button gesture.
+      try{
+        var p=first.play();
+        if(p&&p.catch)p.catch(function(){});
+      }catch(err){}
+
+      // Retry once after the scroll has settled; never reset currentTime.
+      setTimeout(function(){
+        audio(first);
+        try{first.play().catch(function(){});}catch(err){}
+      },450);
+    },true);
   }
 })();
 </script></body></html>
