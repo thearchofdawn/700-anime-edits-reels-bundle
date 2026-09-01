@@ -30,86 +30,88 @@ document.querySelectorAll('.faqItem .question').forEach(function(q){
   q.addEventListener('click',function(){q.parentElement.classList.toggle('open')});
 });
 
-var previewVideos=Array.prototype.slice.call(document.querySelectorAll('#previews .previewGrid video[data-preview]'));
+var productPreviews=Array.prototype.slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
 var activePreview=null;
-var observerStarted=true;
 
-function pauseOtherPreviews(current){
-  previewVideos.forEach(function(other){
-    if(other!==current) other.pause();
+function pauseOthers(current){
+  productPreviews.forEach(function(v){
+    if(v!==current) v.pause();
   });
 }
 
-function playProductPreview(v){
+function playPreview(v){
   if(!v) return;
-  pauseOtherPreviews(v);
+  pauseOthers(v);
   activePreview=v;
   v.muted=false;
   v.volume=1;
-  var p=v.play();
-  if(p&&p.catch) p.catch(function(){});
+  var promise=v.play();
+  if(promise&&promise.catch) promise.catch(function(){});
 }
 
-previewVideos.forEach(function(v){
+productPreviews.forEach(function(v){
   v.muted=false;
   v.volume=1;
 
-  v.addEventListener('mouseenter',function(){ playProductPreview(v); });
+  v.addEventListener('mouseenter',function(){ playPreview(v); });
 
   v.addEventListener('pointerup',function(){
-    playProductPreview(v);
+    playPreview(v);
   });
 
   v.addEventListener('play',function(){
-    pauseOtherPreviews(v);
+    pauseOthers(v);
     activePreview=v;
     v.muted=false;
     v.volume=1;
   });
 });
 
+// Auto-play the product preview that the customer has scrolled onto.
 var observer=new IntersectionObserver(function(entries){
   entries.forEach(function(entry){
     if(entry.isIntersecting && entry.intersectionRatio>=0.65){
-      playProductPreview(entry.target);
+      playPreview(entry.target);
     }
   });
 },{threshold:[0.65]});
+productPreviews.forEach(function(v){observer.observe(v);});
 
-previewVideos.forEach(function(v){ observer.observe(v); });
-
+// Clicking WATCH REAL PREVIEWS always scrolls directly to the first PRODUCT preview
+// and starts that video. The hero preview is never selected.
 var watchPreviewsButton=document.getElementById('watch-previews');
 if(watchPreviewsButton){
   watchPreviewsButton.addEventListener('click',function(e){
     e.preventDefault();
 
-    var firstPreview=document.querySelector('#previews .previewGrid video[data-preview="01"]');
+    var firstPreview=document.querySelector('#previews .previewCard video[data-preview="01"]');
     if(!firstPreview) return;
 
-    // Stop every other video, including the hero preview.
+    // Stop hero and every other video.
     document.querySelectorAll('video').forEach(function(v){
       if(v!==firstPreview) v.pause();
     });
 
-    // Scroll only to the Preview 01 product card.
-    var card=firstPreview.closest('.previewCard');
-    if(card) card.scrollIntoView({behavior:'smooth',block:'center'});
-
-    // Because this click is a direct user gesture, try playback immediately.
     firstPreview.muted=false;
     firstPreview.volume=1;
     activePreview=firstPreview;
 
-    var p=firstPreview.play();
-    if(p&&p.catch){
-      p.catch(function(){
-        // Retry after the scroll begins; mobile browsers may delay playback during smooth scrolling.
+    var card=firstPreview.closest('.previewCard');
+    if(card){
+      card.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+
+    // Start from the click gesture; retry once after scrolling begins.
+    var promise=firstPreview.play();
+    if(promise&&promise.catch){
+      promise.catch(function(){
         setTimeout(function(){
           firstPreview.muted=false;
           firstPreview.volume=1;
           firstPreview.play().catch(function(){});
-        },100);
+        },150);
       });
     }
   });
-}</script></body></html>
+}
+</script></body></html>
