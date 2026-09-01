@@ -22,111 +22,31 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 <footer><div class="wrap"><b style="color:#fff">THE ARCH OF DAWN</b><p>Support: thearchofdawn@gmail.com</p><div class="disc">Usage notice: Third-party anime characters, footage, music, trademarks and other intellectual property remain the property of their respective owners. No ownership of third-party intellectual property is transferred through this purchase. Buyers are responsible for lawful use.</div></div></footer><div class="sticky"><small>700+ Anime Edits • ₹199</small><a class="buy" href="https://superprofile.bio/vp/700--anime-edits-%E2%80%94-the-ultimate-anime-reels-bundle?checkout=true">GET ACCESS — ₹199 →</a></div>
 <script>
 (function(){
-  var hero=document.querySelector('.heroCard video');
-  var grid=document.querySelector('#previews .previewGrid');
-  var videos=grid ? Array.prototype.slice.call(grid.querySelectorAll('video[data-preview]')) : [];
-  var active=null;
   var watch=document.getElementById('watch-previews');
+  if(!watch)return;
 
-  function setAudio(v){
-    if(!v)return;
-    try{
-      v.defaultMuted=false;
-      v.muted=false;
-      v.volume=1;
-    }catch(e){}
-  }
+  watch.addEventListener('click',function(){
+    var first=document.querySelector('#previews .previewCard video[data-preview="01"]');
+    if(!first)return;
 
-  function stopOthers(current){
-    videos.forEach(function(v){
-      if(v!==current) v.pause();
-    });
-  }
+    var card=first.closest('.previewCard');
+    if(!card)return;
 
-  function play(v){
-    if(!v)return;
-    if(hero)hero.pause();
-    stopOthers(v);
-    active=v;
-    setAudio(v);
-    try{
-      var p=v.play();
-      if(p&&p.catch)p.catch(function(){});
-    }catch(e){}
-  }
-
-  videos.forEach(function(v){
-    setAudio(v);
-
-    // Desktop hover.
-    v.addEventListener('mouseenter',function(){
-      play(v);
-    });
-
-    // Any direct interaction with the preview.
-    v.addEventListener('click',function(){
-      play(v);
-    });
-
-    v.addEventListener('touchstart',function(){
-      play(v);
-    },{passive:true});
-
-    v.addEventListener('play',function(){
-      if(hero)hero.pause();
-      stopOthers(v);
-      active=v;
-      setAudio(v);
-    });
+    // Let the browser perform a normal, reliable in-page jump.
+    // The existing scroll/autoplay logic remains completely untouched.
+    location.hash='previews';
+    setTimeout(function(){
+      card.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});
+      setTimeout(function(){
+        try{
+          first.muted=false;
+          first.defaultMuted=false;
+          first.volume=1;
+          var p=first.play();
+          if(p&&p.catch)p.catch(function(){});
+        }catch(e){}
+      },250);
+    },20);
   });
-
-  // Scroll autoplay at 65% visibility.
-  if('IntersectionObserver' in window){
-    var observer=new IntersectionObserver(function(entries){
-      var best=null;
-      for(var i=0;i<entries.length;i++){
-        var entry=entries[i];
-        if(entry.isIntersecting && entry.intersectionRatio>=0.65){
-          if(!best || entry.intersectionRatio>best.intersectionRatio) best=entry;
-        }
-      }
-      if(best) play(best.target);
-    },{threshold:[0.65]});
-
-    videos.forEach(function(v){observer.observe(v);});
-  }
-
-  // WATCH REAL PREVIEWS: find the first product card, scroll to it,
-  // then start Preview 01 from the user's button interaction.
-  if(watch){
-    watch.addEventListener('click',function(e){
-      e.preventDefault();
-      e.stopImmediatePropagation();
-
-      var first=grid ? grid.querySelector('video[data-preview="01"]') : null;
-      if(!first)return;
-
-      if(hero)hero.pause();
-      stopOthers(first);
-      setAudio(first);
-      active=first;
-
-      var card=first.closest('.previewCard');
-      if(card){
-        card.scrollIntoView({behavior:'smooth',block:'center'});
-      }
-
-      var p=first.play();
-      if(p&&p.catch){
-        p.catch(function(){
-          // If the browser rejects the first request, retry after the scroll begins.
-          setTimeout(function(){
-            setAudio(first);
-            first.play().catch(function(){});
-          },150);
-        });
-      }
-    },false);
-  }
 })();
 </script></body></html>
