@@ -31,112 +31,88 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 
   function setFullAudio(v){
     if(!v)return;
-    v.defaultMuted=false;
-    v.muted=false;
-    v.volume=1;
+    try{
+      v.defaultMuted=false;
+      v.muted=false;
+      v.volume=1;
+    }catch(e){}
   }
 
-  function pauseAllExcept(v){
-    videos.forEach(function(x){
-      if(x!==v)x.pause();
+  function pauseOthers(current){
+    videos.forEach(function(v){
+      if(v!==current)v.pause();
     });
   }
 
-  function playPreview(v){
+  function playProduct(v){
     if(!v)return;
     if(hero)hero.pause();
-    pauseAllExcept(v);
+    pauseOthers(v);
     active=v;
     setFullAudio(v);
     try{
       var p=v.play();
-      if(p&&p.catch)p.catch(function(){});
+      if(p&&typeof p.catch==='function')p.catch(function(){});
     }catch(e){}
   }
 
   videos.forEach(function(v){
     setFullAudio(v);
 
-    // Desktop hover.
-    v.addEventListener('mouseenter',function(){
-      playPreview(v);
-    });
+    v.addEventListener('mouseenter',function(){playProduct(v);});
+    v.addEventListener('pointerup',function(){playProduct(v);});
+    v.addEventListener('touchend',function(){playProduct(v);},{passive:true});
 
-    // Mobile/desktop tap/click.
-    v.addEventListener('click',function(){
-      playPreview(v);
-    });
-
-    v.addEventListener('touchend',function(){
-      playPreview(v);
-    },{passive:true});
-
-    // Keep one-at-a-time behavior if native controls are used.
     v.addEventListener('play',function(){
       if(hero)hero.pause();
-      pauseAllExcept(v);
+      pauseOthers(v);
       active=v;
       setFullAudio(v);
     });
   });
 
-  // Scroll autoplay at 65% visibility.
+  // Mobile + desktop scroll autoplay. A preview is eligible once 65% visible.
   if('IntersectionObserver' in window){
     var observer=new IntersectionObserver(function(entries){
-      var candidate=null;
-      for(var i=0;i<entries.length;i++){
-        if(entries[i].isIntersecting && entries[i].intersectionRatio>=0.65){
-          if(!candidate || entries[i].intersectionRatio>candidate.intersectionRatio){
-            candidate=entries[i];
-          }
+      var best=null;
+      entries.forEach(function(entry){
+        if(entry.isIntersecting && entry.intersectionRatio>=0.65){
+          if(!best || entry.intersectionRatio>best.intersectionRatio)best=entry;
         }
-      }
-      if(candidate)playPreview(candidate.target);
+      });
+      if(best)playProduct(best.target);
     },{threshold:[0.65]});
-
     videos.forEach(function(v){observer.observe(v);});
   }
 
-  // Watch button: use a native button click, then explicitly scroll and play Preview 01.
+  // WATCH REAL PREVIEWS -> Preview 01 only.
   if(watch){
     watch.addEventListener('click',function(e){
       e.preventDefault();
-      e.stopImmediatePropagation();
+      e.stopPropagation();
 
       var first=grid ? grid.querySelector('video[data-preview="01"]') : null;
       if(!first)return;
 
-      // Stop anything currently playing.
       if(hero)hero.pause();
-      pauseAllExcept(first);
-
-      // First jump instantly to the actual Preview 01 card.
-      var card=first.closest('.previewCard');
-      if(card){
-        var rect=card.getBoundingClientRect();
-        var y=rect.top + (window.scrollY || window.pageYOffset) - 12;
-        window.scrollTo(0,Math.max(0,y));
-      }
-
-      // Then start Preview 01. The click is the user gesture.
+      pauseOthers(first);
       setFullAudio(first);
       active=first;
-      try{
-        var p=first.play();
-        if(p&&p.catch)p.catch(function(){
-          // Mobile browser fallback after the scroll has completed.
-          setTimeout(function(){
-            setFullAudio(first);
-            first.play().catch(function(){});
-          },50);
-        });
-      }catch(err){
+
+      // Use native scrolling for maximum mobile compatibility.
+      var card=first.closest('.previewCard');
+      if(card){
+        card.scrollIntoView(false);
         setTimeout(function(){
+          window.scrollBy(0,-16);
           setFullAudio(first);
-          first.play().catch(function(){});
-        },50);
+          try{first.play().catch(function(){});}catch(err){}
+        },120);
+      }else{
+        first.scrollIntoView(false);
+        try{first.play().catch(function(){});}catch(err){}
       }
-    },true);
+    },false);
   }
 })();
 </script></body></html>
