@@ -23,19 +23,23 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 <script>
 (function(){
   var hero=document.querySelector('.heroCard video');
-  var videos=[].slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
+  var grid=document.querySelector('#previews .previewGrid');
+  var videos=grid ? Array.prototype.slice.call(grid.querySelectorAll('video[data-preview]')) : [];
   var active=null;
+  var watch=document.getElementById('watch-previews');
 
-  function audio(v){
+  function setAudio(v){
     if(!v)return;
-    v.defaultMuted=false;
-    v.muted=false;
-    v.volume=1;
+    try{
+      v.defaultMuted=false;
+      v.muted=false;
+      v.volume=1;
+    }catch(e){}
   }
 
-  function stopOthers(v){
-    videos.forEach(function(x){
-      if(x!==v)x.pause();
+  function stopOthers(current){
+    videos.forEach(function(v){
+      if(v!==current) v.pause();
     });
   }
 
@@ -44,26 +48,27 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     if(hero)hero.pause();
     stopOthers(v);
     active=v;
-    audio(v);
+    setAudio(v);
     try{
       var p=v.play();
       if(p&&p.catch)p.catch(function(){});
     }catch(e){}
   }
 
-  // Native controls / direct user interaction.
   videos.forEach(function(v){
-    audio(v);
+    setAudio(v);
 
+    // Desktop hover.
     v.addEventListener('mouseenter',function(){
       play(v);
     });
 
+    // Any direct interaction with the preview.
     v.addEventListener('click',function(){
       play(v);
     });
 
-    v.addEventListener('touchend',function(){
+    v.addEventListener('touchstart',function(){
       play(v);
     },{passive:true});
 
@@ -71,60 +76,57 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
       if(hero)hero.pause();
       stopOthers(v);
       active=v;
-      audio(v);
+      setAudio(v);
     });
   });
 
-  // Mobile + desktop scroll autoplay.
+  // Scroll autoplay at 65% visibility.
   if('IntersectionObserver' in window){
-    var io=new IntersectionObserver(function(entries){
-      var chosen=null;
+    var observer=new IntersectionObserver(function(entries){
+      var best=null;
       for(var i=0;i<entries.length;i++){
-        if(entries[i].isIntersecting && entries[i].intersectionRatio>=0.65){
-          if(!chosen || entries[i].intersectionRatio>chosen.intersectionRatio){
-            chosen=entries[i];
-          }
+        var entry=entries[i];
+        if(entry.isIntersecting && entry.intersectionRatio>=0.65){
+          if(!best || entry.intersectionRatio>best.intersectionRatio) best=entry;
         }
       }
-      if(chosen)play(chosen.target);
+      if(best) play(best.target);
     },{threshold:[0.65]});
 
-    videos.forEach(function(v){io.observe(v);});
+    videos.forEach(function(v){observer.observe(v);});
   }
 
-  // WATCH REAL PREVIEWS -> first product card / Preview 01.
-  var watch=document.getElementById('watch-previews');
+  // WATCH REAL PREVIEWS: find the first product card, scroll to it,
+  // then start Preview 01 from the user's button interaction.
   if(watch){
     watch.addEventListener('click',function(e){
       e.preventDefault();
       e.stopImmediatePropagation();
 
-      var first=document.querySelector('#previews .previewCard video[data-preview="01"]');
+      var first=grid ? grid.querySelector('video[data-preview="01"]') : null;
       if(!first)return;
 
       if(hero)hero.pause();
       stopOthers(first);
-      audio(first);
+      setAudio(first);
       active=first;
 
-      // Use the actual card as the scroll target.
       var card=first.closest('.previewCard');
       if(card){
         card.scrollIntoView({behavior:'smooth',block:'center'});
       }
 
-      // Start from the actual button gesture.
-      try{
-        var p=first.play();
-        if(p&&p.catch)p.catch(function(){});
-      }catch(err){}
-
-      // Retry once after the scroll has settled; never reset currentTime.
-      setTimeout(function(){
-        audio(first);
-        try{first.play().catch(function(){});}catch(err){}
-      },450);
-    },true);
+      var p=first.play();
+      if(p&&p.catch){
+        p.catch(function(){
+          // If the browser rejects the first request, retry after the scroll begins.
+          setTimeout(function(){
+            setAudio(first);
+            first.play().catch(function(){});
+          },150);
+        });
+      }
+    },false);
   }
 })();
 </script></body></html>
