@@ -23,71 +23,122 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 <script>
 (function(){
   var heroVideo=document.querySelector('.heroCard video');
-  var previews=Array.prototype.slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
+  var productVideos=Array.prototype.slice.call(document.querySelectorAll('#previews .previewCard video[data-preview]'));
+  var activeVideo=null;
+  var isAutoTransitioning=false;
 
-  function full(v){ if(!v)return; v.defaultMuted=false; v.muted=false; v.volume=1; }
-  function pauseOthers(current){ previews.forEach(function(v){ if(v!==current)v.pause(); }); }
-  function play(v){
-    if(!v)return;
-    if(heroVideo)heroVideo.pause();
-    pauseOthers(v);
-    full(v);
-    try{ var p=v.play(); if(p&&p.catch)p.catch(function(){}); }catch(e){}
+  function forceFullAudio(video){
+    if(!video)return;
+    video.defaultMuted=false;
+    video.muted=false;
+    video.volume=1;
   }
 
-  previews.forEach(function(v){
-    full(v);
+  function pauseOtherProducts(current){
+    productVideos.forEach(function(video){
+      if(video!==current) video.pause();
+    });
+  }
 
-    // Desktop hover.
-    v.addEventListener('mouseenter',function(){ play(v); });
+  function playProduct(video){
+    if(!video)return;
+    if(heroVideo) heroVideo.pause();
+    pauseOtherProducts(video);
+    activeVideo=video;
+    forceFullAudio(video);
+    try{
+      var playPromise=video.play();
+      if(playPromise && playPromise.catch){
+        playPromise.catch(function(){});
+      }
+    }catch(err){}
+  }
 
-    // Phone + desktop tap/click.
-    v.addEventListener('pointerup',function(e){
-      if(e.pointerType==='touch') e.preventDefault();
-      play(v);
+  // Desktop: hover starts playback.
+  productVideos.forEach(function(video){
+    forceFullAudio(video);
+
+    video.addEventListener('mouseenter',function(){
+      playProduct(video);
     });
 
-    v.addEventListener('play',function(){ play(v); });
+    // Touch/click fallback: a real user gesture.
+    video.addEventListener('pointerup',function(){
+      playProduct(video);
+    });
+
+    video.addEventListener('play',function(){
+      if(heroVideo) heroVideo.pause();
+      pauseOtherProducts(video);
+      activeVideo=video;
+      forceFullAudio(video);
+    });
   });
 
-  // Mobile/desktop scroll autoplay.
+  // Scroll autoplay. On phones there is no hover, so visibility drives playback.
   if('IntersectionObserver' in window){
     var observer=new IntersectionObserver(function(entries){
+      var candidate=null;
       entries.forEach(function(entry){
-        if(entry.isIntersecting && entry.intersectionRatio>=0.55) play(entry.target);
+        if(entry.isIntersecting && entry.intersectionRatio>=0.55){
+          candidate=entry.target;
+        }
       });
-    },{threshold:[0.55]});
-    previews.forEach(function(v){observer.observe(v);});
+      if(candidate) playProduct(candidate);
+    },{
+      threshold:[0.55]
+    });
+
+    productVideos.forEach(function(video){
+      observer.observe(video);
+    });
   }
 
-  // WATCH REAL PREVIEWS -> scroll to the actual Preview 01 card and play it.
-  var watch=document.getElementById('watch-previews');
-  if(watch){
-    watch.addEventListener('click',function(e){
-      e.preventDefault();
-      e.stopPropagation();
+  // WATCH REAL PREVIEWS -> Preview 01.
+  var watchButton=document.getElementById('watch-previews');
+  if(watchButton){
+    watchButton.addEventListener('click',function(event){
+      event.preventDefault();
+      event.stopImmediatePropagation();
 
-      var first=document.querySelector('#previews video[data-preview="01"]');
+      var first=document.querySelector('#previews .previewCard video[data-preview="01"]');
       if(!first)return;
 
+      // Stop the hero video and all other product previews.
+      if(heroVideo) heroVideo.pause();
+      productVideos.forEach(function(video){
+        if(video!==first) video.pause();
+      });
+
+      forceFullAudio(first);
+      activeVideo=first;
+
+      // Jump to the actual first product card.
       var card=first.closest('.previewCard');
       if(card){
-        card.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});
-      }else{
-        first.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});
+        var top=card.getBoundingClientRect().top + window.pageYOffset - 20;
+        window.scrollTo(0,Math.max(0,top));
       }
 
-      if(heroVideo)heroVideo.pause();
-      pauseOthers(first);
-      full(first);
-
-      // Immediately attempt playback from the button gesture.
-      play(first);
-
-      // Retry after scroll animation without changing the video position.
-      setTimeout(function(){ play(first); },120);
-      setTimeout(function(){ play(first); },500);
-    });
+      // Click is a direct user gesture, so request playback immediately.
+      try{
+        var p=first.play();
+        if(p && p.catch){
+          p.catch(function(){
+            // Retry after the browser finishes the scroll operation.
+            setTimeout(function(){
+              forceFullAudio(first);
+              first.play().catch(function(){});
+            },200);
+          });
+        }
+      }catch(err){
+        setTimeout(function(){
+          forceFullAudio(first);
+          first.play().catch(function(){});
+        },200);
+      }
+    },true);
   }
 })();
 </script></body></html>
